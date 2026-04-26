@@ -233,7 +233,7 @@
             }
         }
 
-        // --- 1. DATABASE AHLI WARIS (25 GOLONGAN) ---
+        // ahli waris
         const db = [
             { id: "suami", name: "Suami", max: 1, hijab: [], group: "Pasangan" },
             { id: "istri", name: "Istri", max: 4, hijab: [], group: "Pasangan" },
@@ -311,7 +311,7 @@
             applyHijabVisuals();
         }
 
-        // Auto-Hijab UI (Meredupkan tanpa menghapus data untuk keperluan audit report)
+        // hijab
         function applyHijabVisuals() {
             let activeIds = Object.keys(state).filter(k => state[k] > 0);
             db.forEach(h => {
@@ -339,7 +339,7 @@
         function gcd(a, b) { return b === 0 ? a : gcd(b, a % b); }
         function lcm(a, b) { return (a * b) / gcd(a, b); }
 
-        // --- 2. ENGINE LOGIKA UTAMA ---
+    
         function calculateEngine() {
             let inputs = Object.keys(state).filter(k => state[k] > 0);
             if(inputs.length === 0) {
@@ -358,7 +358,7 @@
             let active = [];
             let mahjubList = [];
 
-            // A. FILTER MAHJUB HIRMAN UNTUK AUDIT
+            // mahjub
             inputs.forEach(id => {
                 let hInfo = db.find(x => x.id === id);
                 let blockers = hInfo.hijab.filter(b => inputs.includes(b));
@@ -370,7 +370,7 @@
                 }
             });
 
-            // B. CEK KONDISI CABANG & SAUDARA
+            // saudara
             let hasFuruLk = (active.includes('anak_lk') ? state['anak_lk'] : 0) > 0 || (active.includes('cucu_lk') ? state['cucu_lk'] : 0) > 0;
             let hasFuruPr = (active.includes('anak_pr') ? state['anak_pr'] : 0) > 0 || (active.includes('cucu_pr') ? state['cucu_pr'] : 0) > 0;
             let hasFuru = hasFuruLk || hasFuruPr;
@@ -383,7 +383,7 @@
             let shares = [];
             let ashabah = [];
 
-            // C. PENUGASAN FURUDH (PORSI) DAN ASHABAH (SISA)
+            // Furudh dan Ashabah
             
             // Pasangan
             if (active.includes('suami')) {
@@ -395,10 +395,10 @@
                 else shares.push({ id: 'istri', label: '1/4', reason: 'Karena pewaris tidak meninggalkan keturunan', n: 1, d: 4 });
             }
             
-            // Gharrawain Detector
+            // Gharrawain 
             let isGharrawain = !hasFuru && active.includes('ibu') && active.includes('ayah') && (active.includes('suami') || active.includes('istri')) && active.length === 3;
             
-            // Leluhur (Ibu, Ayah, Nenek, Kakek)
+            // Leluhur
             if (active.includes('ibu')) {
                 if (isGharrawain) {
                     let dGharrawain = active.includes('suami') ? 6 : 4; 
@@ -428,7 +428,7 @@
                 } else ashabah.push({ id: 'kakek', reason: 'Pengganti Ayah sebagai ashabah penuh' });
             }
 
-            // Keturunan (Anak, Cucu)
+            // Keturunan
             if (active.includes('anak_pr')) {
                 if (active.includes('anak_lk')) ashabah.push({ id: 'anak_pr', reason: 'Ditarik saudara laki-lakinya (Ashabah bil Ghair)' });
                 else if (state['anak_pr'] === 1) shares.push({ id: 'anak_pr', label: '1/2', reason: 'Karena tunggal dan tanpa saudara laki-laki', n: 1, d: 2 });
@@ -441,7 +441,7 @@
                 else if (state['cucu_pr'] === 1) shares.push({ id: 'cucu_pr', label: '1/2', reason: 'Pengganti kedudukan anak perempuan tunggal', n: 1, d: 2 });
                 else shares.push({ id: 'cucu_pr', label: '2/3', reason: 'Pengganti kedudukan anak perempuan jamak', n: 2, d: 3 });
             } 
-            // Takmilatus Tsulutsain (Pelengkap 2/3)
+            // 2/3
             else if (active.includes('cucu_pr') && state['anak_pr'] === 1 && !active.includes('anak_lk') && !active.includes('cucu_lk')) {
                 shares.push({ id: 'cucu_pr', label: '1/6', reason: 'Pelengkap porsi perempuan 2/3 (Takmilatus Tsulutsain)', n: 1, d: 6 });
             }
@@ -474,7 +474,7 @@
                 }
             }
 
-            // D. KALKULASI ASAL MASALAH (KPK)
+            // KPK
             let denoms = shares.map(x => x.d);
             let AM = denoms.length > 0 ? denoms.reduce((a, b) => lcm(a, b)) : 1;
             let totalFurudh = 0;
@@ -486,7 +486,7 @@
             let sisaSaham = AM - totalFurudh;
             let ashResults = [];
 
-            // E. DISTRIBUSI ASHABAH (JIKA ADA SISA)
+            // Sisa
             if (sisaSaham > 0 && ashabah.length > 0) {
                 let groupLk = ashabah.find(a => a.id.endsWith('_lk'));
                 let groupPr = ashabah.find(a => a.id.endsWith('_pr') && !a.reason.includes('Ma\'al Ghair'));
@@ -510,7 +510,7 @@
                     else ashResults.push({ id: leluhur.id, label: 'Ashabah', reason: leluhur.reason, sahamVal: sisaSaham });
                 }
             } 
-            // F. PENANGANAN SISA HABIS (Audit transparan)
+            // Sisa Habis
             else if (sisaSaham <= 0 && ashabah.length > 0) {
                 ashabah.forEach(a => {
                     let targetS = shares.find(x => x.id === a.id);
@@ -519,7 +519,7 @@
                 });
             }
 
-            // G. RENDER LAPORAN
+            // LAPORAN
             let out = `<div class="bg-black/30 p-5 rounded-2xl border border-[#b48e56]/40 mb-5 text-center shadow-lg">
                 <div class="text-[10px] text-gray-400 uppercase tracking-widest">Harta Bersih (Tirkah)</div>
                 <div class="text-3xl font-serif font-bold gold-text mt-1">Rp ${Math.floor(tirkah).toLocaleString()}</div>
@@ -559,7 +559,6 @@
             goTo(3);
         }
 
-        // Boot UI
         initUI();
     </script>
 </body>
